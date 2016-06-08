@@ -91,7 +91,6 @@ if [[ $# -eq 0 ]]; then
 		if [[ ${overw:0:1} = 'y' ]]; then
 			curmaxtime=$(get "MAXTIME")
 			curmaxsize=$(get "MAXSIZE")
-			curlog=$(get "MESSAGE")
 		else
 			exit 1
 		fi
@@ -100,13 +99,13 @@ if [[ $# -eq 0 ]]; then
 		touch $cpee_home/config
 	fi
 
-	echo -n "How many tilog do you want to copy? $curmaxtime : "
+	echo -n "How many copies do you want to have at most? $curmaxtime : "
 	read maxtime
 	if [[ -z $maxtime ]]; then
 		maxtime=$curmaxtime
 	fi
 
-	echo -n "What is the maximum size of files do you want to copy? [MB] $curmaxsize : "
+	echo -n "How much the total size of files do you want to copy at once at most? [MB] $curmaxsize : "
 	read maxsize
 	if [[ -z $maxsize ]]; then
 		maxsize=$curmaxsize
