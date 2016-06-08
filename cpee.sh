@@ -25,7 +25,7 @@ cpee_read(){
 		fi
 
 		# XXX This is to avoid returning the error log 
-		#     when subcommand is "head_log"
+		#     when subcommand is not "head_log"
 		if [[ ! -d $cpee_home/$dir ]]; then
 			buf="${buf}### Include file under $cpee_home : $dir.\n\n"
 			continue
