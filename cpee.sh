@@ -66,7 +66,7 @@ cpee_read(){
 	done
 
 	if [[ $sub = "read" ]]; then
-		echo -en "$buf" | less -R
+		echo -en "$buf" | less -XR
 	elif [[ $sub = "show" || $sub = "head" ]]; then
 		echo -en "$buf"
 	fi
