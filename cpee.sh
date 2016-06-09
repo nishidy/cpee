@@ -22,6 +22,8 @@ cpee_read(){
 				echo "$log"
 				exit 0
 			fi
+		else
+			log="* * *"
 		fi
 
 		# XXX This is to avoid returning the error log 
@@ -131,7 +133,7 @@ if [[ $# -eq 0 ]]; then
 		maxtime=$curmaxtime
 	fi
 
-	echo -n "How much the total size of files do you want to copy at once at most? [MB] $curmaxsize : "
+	echo -n "How large files do you want to copy at once at most? [MB] $curmaxsize : "
 	read maxsize
 	if [[ -z $maxsize ]]; then
 		maxsize=$curmaxsize
@@ -167,6 +169,8 @@ else
 		read log
 		if [[ -n $log ]]; then
 			break
+		else
+			echo "### Empty string is not allowed."
 		fi
 	done
 
@@ -181,20 +185,20 @@ else
 
 	maxtime=$(grep "MAXTIME" $cpee_home/config | awk -F '=' '{print $2}')
 	if [[ $(ls -1 $cpee_home | wc -l) -gt $maxtime ]]; then
-		echo "!!! Reached to the maximum limit of the number of copies."
+		echo "!!! Reached to the maximum limit of the number of copies. Aborted."
 		exit 1
 	fi
 
 	sum_size=$(get_sum_size "${@:1:$num_src}")
 	maxsize=$(grep "MAXSIZE" $cpee_home/config | awk -F '=' '{print $2}')
 	if [[ $sum_size -gt $maxsize ]]; then
-		echo "!!! Reached to the maximum limit of the size of files."
+		echo "!!! Reached to the maximum limit of the size of files. Aborted."
 		exit 1
 	fi
 
 	argc=$#
 	num_src=$((argc-1))
-	idx_dst=$((argc))
+	idx_dst=$((argc)) # The last one must be destination
 
 	# Argument may include space in thier path
 	#src_files="${@:1:$num_src}" # This will not keep the arguments which include space
@@ -208,7 +212,8 @@ else
 	cp "$@" # cp "$1" "$2" ...
 	cp_ret=$?
 	if [[ $cp_ret -ne 0 ]] ; then
-		exit  $cp_ret
+		echo -e "\e[34mFailed.\e[0m\n"
+		exit $cp_ret
 	else
 		echo -e "\e[32mSuccess.\e[0m\n"
 	fi
