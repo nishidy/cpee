@@ -221,7 +221,13 @@ else
 	cpee_dir=$cpee_home/`date +%Y%m%d%H%M%S`
 	mkdir $cpee_dir
 
+	src_repl=""
 	for src in "${@:1:$num_src}" ; do
+		if [[ ${src:0:1} == '-' ]]; then
+			continue
+		elif [[ -z $src_repl ]] ; then
+			src_repl=$src
+		fi
 		cp --preserve "$src" "$cpee_dir"
 	done
 
@@ -236,6 +242,9 @@ else
 
 	echo "Copy source dir  : $(dirname $src_repl)"
 	for src in "${@:1:$num_src}" ; do
+		if [[ ${src:0:1} == '-' ]]; then
+			continue
+		fi
 		ls -l "$src"
 	done
 
@@ -244,6 +253,9 @@ else
 	echo "Copy destination : $dst"
 	if [[ $dst_dir -eq 1 ]] ; then
 		for src in "${@:1:$num_src}" ; do
+			if [[ ${src:0:1} == '-' ]]; then
+				continue
+			fi
 			ls -l "$dst/$(basename $src)"
 		done
 	else
