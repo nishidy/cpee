@@ -2,6 +2,38 @@
 
 cpee_home="$HOME/.cpee"
 
+cpee_checkout(){
+	echo -n "Which one do you want to checkout? [md5] : "
+	read md5
+	md5_len=${#md5}
+
+	checkout_path=""
+	for dir in $(ls -t $cpee_home) ; do
+
+		if [[ ! -d $cpee_home/$dir ]]; then
+			continue
+		fi
+
+		pushd $cpee_home/$dir > /dev/null
+
+		for file in $(ls | grep -v log | grep -v path) ; do
+
+			md5_file=$(md5sum $file | awk '{print $1}')
+			if [[ $md5 = ${md5_file:0:$md5_len} ]] ; then
+				checkout_path="$cpee_home/$dir/$file"
+				break
+			fi
+		done
+
+		popd > /dev/null
+
+		if [[ -n $checkout_path ]] ; then
+			cp -i --preserve $checkout_path .
+			break
+		fi
+	done
+}
+
 cpee_read(){
 	# $1 may be blank or subcommand
 	sub=$1
@@ -54,9 +86,9 @@ cpee_read(){
 
 		buf="${buf}\e[33mFiles  : [md5 size name]\e[0m\n"
 		for file in $(ls | grep -v log | grep -v path) ; do
-			sum_file=$(md5sum $file | awk '{print $1}')
+			md5_file=$(md5sum $file | awk '{print $1}')
 			file_size=$(ls -lh $file | awk '{print $5}')
-			buf="${buf}    ${sum_file:0:16} $file_size $file\n"
+			buf="${buf}    ${md5_file:0:16} $file_size $file\n"
 		done
 		buf="${buf}\n"
 
@@ -133,7 +165,7 @@ if [[ $# -eq 0 ]]; then
 		maxtime=$curmaxtime
 	fi
 
-	echo -n "How large files do you want to copy at once at most? [MB] $curmaxsize : "
+	echo -n "How much files do you want to copy at once at most? [MB] $curmaxsize : "
 	read maxsize
 	if [[ -z $maxsize ]]; then
 		maxsize=$curmaxsize
@@ -144,13 +176,17 @@ if [[ $# -eq 0 ]]; then
 
 elif [[ $# -eq 1 ]]; then
 	# Subcommand
-	case $1 in
+	sub=$1
+	case $sub in
 	read|log|show|head)
-		sub=$1
 		if [[ $sub = "log" ]]; then
 			sub="read"
 		fi
 		cpee_read $sub
+		;;
+	checkout|take)
+		sub="checkout"
+		cpee_checkout
 		;;
 	*)
 		:
