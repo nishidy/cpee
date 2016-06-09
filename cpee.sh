@@ -31,6 +31,14 @@ cpee_read(){
 			continue
 		fi
 
+		if [[ -f path ]]; then
+			src_path=$(head -n1 path)
+			dst_path=$(tail -n1 path)
+		else
+			src_path="* * *"
+			dst_path="* * *"
+		fi
+
 		if [[ ${#datetime} -eq 14 ]] ; then
 			YYYYmmdd=${datetime:0:8}
 			HH=${datetime:8:2}
@@ -38,11 +46,12 @@ cpee_read(){
 			SS=${datetime:12:2}
 			datestr=$(date --date="${YYYYmmdd} ${HH}:${MM}:${SS}")
 			buf="${buf}\e[33mDate   :\e[0m $datestr\n"
-			buf="${buf}\e[33mComment:\e[0m ${log:-'No comment'}\n" # may include LF
+			buf="${buf}\e[33mPath   :\e[0m $src_path -> $dst_path\n"
+			buf="${buf}\e[33mComment:\e[0m $log\n" # may include LF
 		fi
 
 		buf="${buf}\e[33mFiles  : [md5 size name]\e[0m\n"
-		for file in $(ls | grep -v log) ; do
+		for file in $(ls | grep -v log | grep -v path) ; do
 			sum_file=$(md5sum $file | awk '{print $1}')
 			file_size=$(ls -lh $file | awk '{print $5}')
 			buf="${buf}    ${sum_file:0:16} $file_size $file\n"
@@ -80,6 +89,23 @@ get_sum_size() {
 		sum=$((sum + size))
 	done
 	echo $((sum / 1000))
+}
+
+get_abs_dirname(){
+	if [[ -d "$1" ]] ; then
+		pushd "$1" > /dev/null
+		echo $(pwd)
+		popd > /dev/null
+	else
+		dir="${1%/*}"
+		if [[ -d "$dir" ]] ;then
+			pushd "$dir" > /dev/null
+			echo $(pwd)
+			popd > /dev/null
+		else
+			echo $(pwd)
+		fi
+	fi
 }
 
 if [[ $# -eq 0 ]]; then
@@ -179,7 +205,7 @@ else
 		dst_dir=0
 	fi
 
-	cp "$@" # cp "$1" "$2" ... "${argc-1}"
+	cp "$@" # cp "$1" "$2" ...
 	cp_ret=$?
 	if [[ $cp_ret -ne 0 ]] ; then
 		exit  $cp_ret
@@ -198,9 +224,12 @@ else
 		echo "$log" > $cpee_dir/log
 	fi
 
+	echo $(get_abs_dirname "$src_repl") > $cpee_dir/path
+	echo $(get_abs_dirname "$dst") >> $cpee_dir/path
+
 	sync;sync;sync
 
-	echo "Copy source dir  : $(dirname ${@:1:1})"
+	echo "Copy source dir  : $(dirname $src_repl)"
 	for src in "${@:1:$num_src}" ; do
 		ls -l "$src"
 	done
