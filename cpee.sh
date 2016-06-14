@@ -53,6 +53,8 @@ cpee_read(){
 	if [[ -f $cpee_home/logcache ]] ; then
 		logdate=$(head -n1 $cpee_home/logcache)
 		logdatesec=$(date --date="${logdate:18}" +%s)
+	else
+		logdatesec=0
 	fi
 
 	for dir in $(ls -t $cpee_home) ; do
