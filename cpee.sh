@@ -34,15 +34,51 @@ cpee_checkout(){
 	done
 }
 
+update_log_cache(){
+	echo -e "$1" > $cpee_home/logcache
+}
+
+read_log_cache(){
+	if [[ -f $cpee_home/logcache ]] ; then
+		cat $cpee_home/logcache
+	else
+		echo ""
+	fi
+}
+
 cpee_read(){
 	# $1 may be blank or subcommand
 	sub=$1
 
-	buf=""
+	if [[ -f $cpee_home/logcache ]] ; then
+		logdate=$(head -n1 $cpee_home/logcache)
+		logdatesec=$(date --date="${logdate:18}" +%s)
+	fi
+
 	for dir in $(ls -t $cpee_home) ; do
-		datetime=$dir
 
 		if [[ ! -d $cpee_home/$dir ]]; then
+			continue
+		fi
+
+		datetime=$dir
+
+		if [[ ${#datetime} -eq 14 ]] ; then
+
+			YYYYmmdd=${datetime:0:8}
+			HH=${datetime:8:2}
+			MM=${datetime:10:2}
+			SS=${datetime:12:2}
+			datestr=$(date --date="${YYYYmmdd} ${HH}:${MM}:${SS}")
+
+			if [[ $sub != "head" ]] ; then
+				datesec=$(date --date="${YYYYmmdd} ${HH}:${MM}:${SS}" +%s)
+				if [[ $datesec -le $logdatesec ]] ; then
+					break
+				fi
+			fi
+
+		else
 			continue
 		fi
 
@@ -73,23 +109,17 @@ cpee_read(){
 			dst_path="* * *"
 		fi
 
-		if [[ ${#datetime} -eq 14 ]] ; then
-			YYYYmmdd=${datetime:0:8}
-			HH=${datetime:8:2}
-			MM=${datetime:10:2}
-			SS=${datetime:12:2}
-			datestr=$(date --date="${YYYYmmdd} ${HH}:${MM}:${SS}")
-			buf="${buf}\e[33mDate   :\e[0m $datestr\n"
-			buf="${buf}\e[33mPath   :\e[0m $src_path -> $dst_path\n"
-			buf="${buf}\e[33mComment:\e[0m $log\n" # may include LF
-		fi
-
+		buf="${buf}\e[33mDate   :\e[0m $datestr\n"
+		buf="${buf}\e[33mPath   :\e[0m $src_path -> $dst_path\n"
+		buf="${buf}\e[33mComment:\e[0m $log\n" # may include LF
 		buf="${buf}\e[33mFiles  : [md5 size name]\e[0m\n"
+
 		for file in $(ls | grep -v log | grep -v path) ; do
 			md5_file=$(md5sum $file | awk '{print $1}')
 			file_size=$(ls -lh $file | awk '{print $5}')
 			buf="${buf}    ${md5_file:0:16} $file_size $file\n"
 		done
+
 		buf="${buf}\n"
 
 		popd > /dev/null
@@ -99,11 +129,17 @@ cpee_read(){
 		fi
 	done
 
+	if [[ $sub != "head" ]] ; then
+		buf="${buf}$(read_log_cache)"
+	fi
+
 	if [[ $sub = "read" ]]; then
 		echo -en "$buf" | less -XR
 	elif [[ $sub = "show" || $sub = "head" ]]; then
 		echo -en "$buf"
 	fi
+
+	update_log_cache "$buf"
 }
 
 get(){
