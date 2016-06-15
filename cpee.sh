@@ -302,10 +302,11 @@ else
 		elif [[ -z $src_repl ]] ; then
 			src_repl=$src
 		fi
-		if [[ -f $src ]]; then
-			cp -a "$src" "$cpee_dir"
+		cp -a "$src" "$cpee_dir"
+		if [[ -f $src ]] ; then
 			chown 400 "$cpee_dir/$src"
 		else
+			chown 500 "$cpee_dir/$src"
 		fi
 	done
 
