@@ -303,6 +303,7 @@ else
 			src_repl=$src
 		fi
 		cp --preserve "$src" "$cpee_dir"
+		chown 400 "$cpee_dir/$src"
 	done
 
 	if [[ -n "$log" ]] ; then
@@ -314,7 +315,7 @@ else
 
 	sync;sync;sync
 
-	echo "Copy source dir  : $(dirname $src_repl)"
+	chown 400 $cpee_dir
 	for src in "${@:1:$num_src}" ; do
 		if [[ ${src:0:1} == '-' ]]; then
 			continue
