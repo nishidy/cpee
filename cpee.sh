@@ -354,9 +354,9 @@ else
 		fi
 		cp -a "$src" "$cpee_dir"
 		if [[ -f $src ]] ; then
-			chown 400 "$cpee_dir/$src"
+			chmod 400 "$cpee_dir/$src"
 		else
-			chown 500 "$cpee_dir/$src"
+			chmod 500 "$cpee_dir/$src"
 		fi
 	done
 
@@ -369,7 +369,7 @@ else
 
 	sync;sync;sync
 
-	chown 400 $cpee_dir
+	chmod 400 $cpee_dir
 
 	echo "Source directory      : $(dirname $src_repl)"
 	for src in "${@:1:$num_src}" ; do
