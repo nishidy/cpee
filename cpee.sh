@@ -319,6 +319,8 @@ else
 	sync;sync;sync
 
 	chown 400 $cpee_dir
+
+	echo "Source directory      : $(dirname $src_repl)"
 	for src in "${@:1:$num_src}" ; do
 		if [[ ${src:0:1} == '-' ]]; then
 			continue
@@ -328,7 +330,7 @@ else
 
 	echo ""
 
-	echo "Copy destination : $dst"
+	echo "Destination directory : $dst"
 	if [[ $dst_dir -eq 1 ]] ; then
 		for src in "${@:1:$num_src}" ; do
 			if [[ ${src:0:1} == '-' ]]; then
