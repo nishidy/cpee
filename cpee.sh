@@ -16,12 +16,22 @@ cpee_checkout(){
 
 		pushd $cpee_home/$dir > /dev/null
 
-		for file in $(ls | grep -v log | grep -v path) ; do
+		for save in $(ls | grep -v log | grep -v path) ; do
 
-			md5_file=$(md5sum $file | awk '{print $1}')
-			if [[ $md5 = ${md5_file:0:$md5_len} ]] ; then
-				checkout_path="$cpee_home/$dir/$file"
-				break
+			if [[ -f $save ]] ; then
+				file=$save
+				md5_file=$(md5sum $file | awk '{print $1}')
+				if [[ $md5 = ${md5_file:0:$md5_len} ]] ; then
+					checkout_path="$cpee_home/$dir/$file"
+					break
+				fi
+			else
+				root=$save
+				md5_root=$(echo "$datetime $root" | md5sum | awk '{print $1}')
+				if [[ $md5 = ${md5_root:0:$md5_len} ]] ; then
+					checkout_path="$cpee_home/$dir/$root"
+					break
+				fi
 			fi
 		done
 
@@ -58,6 +68,7 @@ cpee_read(){
 	fi
 
 	for dir in $(ls -t $cpee_home) ; do
+		echo "$dir"
 
 		if [[ ! -d $cpee_home/$dir ]]; then
 			continue
@@ -116,10 +127,37 @@ cpee_read(){
 		buf="${buf}\e[33mComment:\e[0m $log\n" # may include LF
 		buf="${buf}\e[33mFiles  : [md5 size name]\e[0m\n"
 
-		for file in $(ls | grep -v log | grep -v path) ; do
-			md5_file=$(md5sum $file | awk '{print $1}')
-			file_size=$(ls -lh $file | awk '{print $5}')
-			buf="${buf}    ${md5_file:0:16} $file_size $file\n"
+		for save in $(ls | grep -v log | grep -v path) ; do
+
+			if [[ -f $save ]] ; then
+				file=$save
+
+				md5_file=$(md5sum $file | awk '{print $1}')
+				file_size=$(ls -lh $file | awk '{print $5}')
+				buf="${buf}    ${md5_file:0:16} $file_size $file\n"
+
+			elif [[ -d $save ]] ; then
+				root=$save
+
+				md5_root=$(echo "$datetime $root" | md5sum | awk '{print $1}')
+				buf="${buf}    ${md5_root:0:16} $root\n"
+				for node in $(ls -R "$root"); do
+					if [[ -d $dir/$node ]] ; then
+						continue
+					fi
+					size=${#node}
+					size_1=$((size-1))
+					if [[ ${node:size_1:1} = ":" ]]; then
+						dir=${node:0:size_1}
+					else
+						md5_file=$(md5sum "$dir/$node" | awk '{print $1}')
+						file_size=$(ls -lh "$dir/$node"| awk '{print $5}')
+						buf="${buf}    ${md5_file:0:16} $file_size $dir/$node\n"
+					fi
+				done
+
+			fi
+
 		done
 
 		buf="${buf}\n"
@@ -141,7 +179,9 @@ cpee_read(){
 		echo -en "$buf"
 	fi
 
-	update_log_cache "$buf"
+	if [[ $sub != "head" ]]; then
+		update_log_cache "$buf"
+	fi
 }
 
 get(){
@@ -213,6 +253,7 @@ if [[ $# -eq 0 ]]; then
 	echo "MAXSIZE=$maxsize" >> $cpee_home/config
 
 elif [[ $# -eq 1 ]]; then
+
 	# Subcommand
 	sub=$1
 	case $sub in
@@ -238,6 +279,32 @@ else
 		exit 1
 	fi
 
+	maxtime=$(grep "MAXTIME" $cpee_home/config | awk -F '=' '{print $2}')
+	if [[ $(ls -1 $cpee_home | wc -l) -gt $maxtime ]]; then
+		echo "!!! Reached to the maximum limit of the number of copies. Aborted."
+		exit 1
+	fi
+
+	sum_size=$(get_sum_size "${@:1:$num_src}")
+	maxsize=$(grep "MAXSIZE" $cpee_home/config | awk -F '=' '{print $2}')
+	if [[ $sum_size -gt $maxsize ]]; then
+		echo "!!! Reached to the maximum limit of the size of files. Aborted."
+		exit 1
+	fi
+
+	argc=$#
+	num_src=$((argc-1))
+	idx_dst=$((argc)) # The last one must be destination
+
+	n=1
+	for src in "${@:1:$num_src}" ; do
+		if [[ ${src:0:1} == '-' ]]; then
+			continue
+		fi
+		echo "[$n] $src"
+		n=$((n+1))
+	done
+
 	while [ 1 ]; do
 		echo -n "Leave log for this copy : "
 		read log
@@ -256,23 +323,6 @@ else
 			exit 10
 		fi
 	fi
-
-	maxtime=$(grep "MAXTIME" $cpee_home/config | awk -F '=' '{print $2}')
-	if [[ $(ls -1 $cpee_home | wc -l) -gt $maxtime ]]; then
-		echo "!!! Reached to the maximum limit of the number of copies. Aborted."
-		exit 1
-	fi
-
-	sum_size=$(get_sum_size "${@:1:$num_src}")
-	maxsize=$(grep "MAXSIZE" $cpee_home/config | awk -F '=' '{print $2}')
-	if [[ $sum_size -gt $maxsize ]]; then
-		echo "!!! Reached to the maximum limit of the size of files. Aborted."
-		exit 1
-	fi
-
-	argc=$#
-	num_src=$((argc-1))
-	idx_dst=$((argc)) # The last one must be destination
 
 	# Argument may include space in thier path
 	#src_files="${@:1:$num_src}" # This will not keep the arguments which include space
