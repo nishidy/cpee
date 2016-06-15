@@ -28,7 +28,7 @@ cpee_checkout(){
 		popd > /dev/null
 
 		if [[ -n $checkout_path ]] ; then
-			cp -i --preserve $checkout_path .
+			cp -i -a $checkout_path .
 			break
 		fi
 	done
@@ -302,8 +302,11 @@ else
 		elif [[ -z $src_repl ]] ; then
 			src_repl=$src
 		fi
-		cp --preserve "$src" "$cpee_dir"
-		chown 400 "$cpee_dir/$src"
+		if [[ -f $src ]]; then
+			cp -a "$src" "$cpee_dir"
+			chown 400 "$cpee_dir/$src"
+		else
+		fi
 	done
 
 	if [[ -n "$log" ]] ; then
