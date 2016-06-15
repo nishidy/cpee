@@ -71,7 +71,7 @@ cpee_read(){
 			HH=${datetime:8:2}
 			MM=${datetime:10:2}
 			SS=${datetime:12:2}
-			datestr=$(date --date="${YYYYmmdd} ${HH}:${MM}:${SS}")
+			datestr=$(env LC_TIME=en_US.UTF-8 date --date="${YYYYmmdd} ${HH}:${MM}:${SS}")
 
 			if [[ $sub != "head" ]] ; then
 				datesec=$(date --date="${YYYYmmdd} ${HH}:${MM}:${SS}" +%s)
