@@ -327,11 +327,6 @@ else
 	# Argument may include space in thier path
 	#src_files="${@:1:$num_src}" # This will not keep the arguments which include space
 	dst="${@:$idx_dst:1}"
-	if [[ -d "$dst" ]] ; then
-		dst_dir=1
-	else
-		dst_dir=0
-	fi
 
 	cp "$@" # cp "$1" "$2" ...
 	cp_ret=$?
@@ -369,14 +364,24 @@ else
 
 	sync;sync;sync
 
-	chmod 400 $cpee_dir
+	chmod 500 $cpee_dir
 
-	echo "Source directory      : $(dirname $src_repl)"
+	if [[ -d "$dst" ]] ; then
+		dst_dir=1
+	else
+		dst_dir=0
+	fi
+
+	echo "Source directory : $(dirname $src_repl)"
 	for src in "${@:1:$num_src}" ; do
 		if [[ ${src:0:1} == '-' ]]; then
 			continue
 		fi
-		ls -l "$src"
+		if [[ -f $src ]]; then
+			ls -l "$src"
+		else
+			ls -lR "$src"
+		fi
 	done
 
 	echo ""
@@ -387,7 +392,11 @@ else
 			if [[ ${src:0:1} == '-' ]]; then
 				continue
 			fi
-			ls -l "$dst/$(basename $src)"
+			if [[ -f $src ]]; then
+				ls -l "$dst/$(basename $src)"
+			else
+				ls -lR "$dst"
+			fi
 		done
 	else
 		ls -l "$dst"
