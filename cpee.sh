@@ -22,18 +22,37 @@ cpee_checkout(){
 
 			if [[ -f $save ]] ; then
 				file=$save
+
 				md5_file=$(md5sum $file | awk '{print $1}')
 				if [[ $md5 = ${md5_file:0:$md5_len} ]] ; then
 					checkout_path="$cpee_home/$dir/$file"
 					break
 				fi
+
 			else
 				root=$save
-				md5_root=$(echo "$datetime $root" | md5sum | awk '{print $1}')
-				if [[ $md5 = ${md5_root:0:$md5_len} ]] ; then
+
+				sum_md5="0" # Sum of the results of md5sum for each file
+				for node in $(ls -R "$root"); do
+					if [[ -d $subdir/$node ]] ; then
+						continue
+					fi
+					size=${#node}
+					size_1=$((size-1))
+					if [[ ${node:size_1:1} = ":" ]]; then
+						subdir=${node:0:size_1}
+					else
+						md5_file=$(md5sum "$subdir/$node" | awk '{print $1}')
+						sum_md5=$(echo "obase=16;ibase=16;${sum_md5}+${md5_file^^}" | bc )
+					fi
+				done
+				sum_md5=${sum_md5,,}
+				if [[ $md5 = ${sum_md5:0:$md5_len} ]] ; then
 					checkout_path="$cpee_home/$dir/$root"
+					echo $checkout_path
 					break
 				fi
+
 			fi
 		done
 
@@ -140,21 +159,20 @@ cpee_read(){
 			elif [[ -d $save ]] ; then
 				root=$save
 
-				md5_root=$(echo "$datetime $root" | md5sum | awk '{print $1}')
 				sum_md5="0" # Sum of the results of md5sum for each file
 				lbuf=""
 				for node in $(ls -R "$root"); do
-					if [[ -d $dir/$node ]] ; then
+					if [[ -d $subdir/$node ]] ; then
 						continue
 					fi
 					size=${#node}
 					size_1=$((size-1))
 					if [[ ${node:size_1:1} = ":" ]]; then
-						dir=${node:0:size_1}
+						subdir=${node:0:size_1}
 					else
-						md5_file=$(md5sum "$dir/$node" | awk '{print $1}')
-						file_size=$(ls -lh "$dir/$node"| awk '{print $5}')
-						lbuf="${lbuf}    ${md5_file:0:16}\t$dir/$node\t$file_size\n"
+						md5_file=$(md5sum "$subdir/$node" | awk '{print $1}')
+						file_size=$(ls -lh "$subdir/$node"| awk '{print $5}')
+						lbuf="${lbuf}    ${md5_file:0:16}\t$subdir/$node\t$file_size\n"
 						sum_md5=$(echo "obase=16;ibase=16;${sum_md5}+${md5_file^^}" | bc )
 					fi
 				done
