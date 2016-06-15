@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# need bash >= 4.0
+
 cpee_home="$HOME/.cpee"
 
 cpee_checkout(){
