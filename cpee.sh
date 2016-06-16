@@ -196,7 +196,7 @@ cpee_read(){
 
 	if [[ -f $cpee_home/logcache ]] ; then
 		logdate=$(head -n1 $cpee_home/logcache)
-		logdatesec=$(date --date="${logdate:18}" +%s)
+		logdatesec=$(date --date="${logdate:17}" +%s)
 	else
 		logdatesec=0
 	fi
@@ -255,10 +255,10 @@ cpee_read(){
 			dst_path="* * *"
 		fi
 
-		buf="${buf}\e[33mDate   :\e[0m $datestr\n"
-		buf="${buf}\e[33mPath   :\e[0m $src_path -> $dst_path\n"
-		buf="${buf}\e[33mComment:\e[0m $log\n" # may include LF
-		buf="${buf}\e[33mFiles  : [md5 size name]\e[0m\n"
+		buf="${buf}\e[33mDate  :\e[0m $datestr\n"
+		buf="${buf}\e[33mPath  :\e[0m $src_path -> $dst_path\n"
+		buf="${buf}\e[33mLog   :\e[0m $log\n" # may include LF
+		buf="${buf}\e[33mFiles : [md5 name size]\e[0m\n"
 
 		for save in $(ls | grep -v log | grep -v path) ; do
 
