@@ -7,6 +7,19 @@ fi
 
 cpee_home="$HOME/.cpee"
 
+cpee_help(){
+	echo "cpee accepts any options of cp. The usage is completely same as cp."
+	echo "If cpee takes only one argument, the first argument is treated as subcommand."
+	echo ""
+	echo "cpee subcommands : "
+	echo "    log|read : See the history of copies, attributes of copies and the associated logs with less."
+	echo "    show     : Same as log, but without less."
+	echo "    head     : Show the only latest log."
+	echo "    checkout : Put the copy from the history on the current directory specified by hash value of md5 without implicit overwritten."
+	echo "    search   : Show the files or directories which have the same hash value of md5."
+	echo ""
+}
+
 cpee_search(){
 	echo -n "Which one do you want to search? [md5] : "
 	read md5
@@ -393,6 +406,9 @@ elif [[ $# -eq 1 ]]; then
 	search|find)
 		sub="search"
 		cpee_search
+		;;
+	help|--help)
+		cpee_help
 		;;
 	*)
 		:
