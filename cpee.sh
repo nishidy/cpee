@@ -1,6 +1,9 @@
 #!/bin/bash
 
-# need bash >= 4.0
+if [[ ${BASH_VERSINFO[0]} -lt 4 ]]; then
+	echo "XXX You need bash version 4 or later."
+	exit 1
+fi
 
 cpee_home="$HOME/.cpee"
 
