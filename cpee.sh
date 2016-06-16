@@ -4,6 +4,83 @@
 
 cpee_home="$HOME/.cpee"
 
+cpee_search(){
+	echo -n "Which one do you want to search? [md5] : "
+	read md5
+	md5_len=${#md5}
+
+	echo ""
+	echo -en "\e[33mFiles  : [date md5 name]\e[0m\n"
+
+	for dir in $(ls -t $cpee_home) ; do
+
+		if [[ ! -d $cpee_home/$dir ]]; then
+			continue
+		fi
+
+		datetime=$dir
+
+		if [[ ${#datetime} -eq 14 ]] ; then
+			YYYYmmdd=${datetime:0:8}
+			HH=${datetime:8:2}
+			MM=${datetime:10:2}
+			SS=${datetime:12:2}
+			datestr=$(env LC_TIME=en_US.UTF-8 date --date="${YYYYmmdd} ${HH}:${MM}:${SS}")
+		else
+			continue
+		fi
+
+		pushd $cpee_home/$dir > /dev/null
+
+		for save in $(ls | grep -v log | grep -v path) ; do
+
+			if [[ -f $save ]] ; then
+				file=$save
+
+				md5_file=$(md5sum $file | awk '{print $1}')
+				if [[ $md5 = ${md5_file:0:$md5_len} ]] ; then
+					echo -e "    $datestr\t${md5_file:0:16}\t$file"
+				fi
+
+			else
+				root=$save
+
+				sum_md5="0" # Sum of the results of md5sum for each file
+				for node in $(ls -R "$root"); do
+					if [[ -d $subdir/$node ]] ; then
+						continue
+					fi
+					size=${#node}
+					size_1=$((size-1))
+					if [[ ${node:size_1:1} = ":" ]]; then
+						subdir=${node:0:size_1}
+					else
+						md5_file=$(md5sum "$subdir/$node" | awk '{print $1}')
+
+						if [[ $md5 = ${md5_file:0:$md5_len} ]] ; then
+							echo -e "    $datestr\t${md5_file:0:16}\t$subdir/$node"
+						fi
+						sum_md5=$(echo "obase=16;ibase=16;${sum_md5}+${md5_file^^}" | bc )
+					fi
+				done
+
+				if [[ -z $checkout_path ]]; then
+					sum_md5=${sum_md5,,}
+					if [[ $md5 = ${sum_md5:0:$md5_len} ]] ; then
+						checkout_path="$cpee_home/$dir/$root"
+						echo -e "    $datestr\t${sum_md5:0:16}\t$root"
+					fi
+				fi
+
+			fi
+		done
+
+		popd > /dev/null
+
+	done
+
+}
+
 cpee_checkout(){
 	echo -n "Which one do you want to checkout? [md5] : "
 	read md5
@@ -43,14 +120,22 @@ cpee_checkout(){
 						subdir=${node:0:size_1}
 					else
 						md5_file=$(md5sum "$subdir/$node" | awk '{print $1}')
+
+						if [[ $md5 = ${md5_file:0:$md5_len} ]] ; then
+							checkout_path="$cpee_home/$dir/$subdir/$node"
+							break
+						fi
 						sum_md5=$(echo "obase=16;ibase=16;${sum_md5}+${md5_file^^}" | bc )
 					fi
 				done
-				sum_md5=${sum_md5,,}
-				if [[ $md5 = ${sum_md5:0:$md5_len} ]] ; then
-					checkout_path="$cpee_home/$dir/$root"
-					echo $checkout_path
-					break
+
+				if [[ -z $checkout_path ]]; then
+					sum_md5=${sum_md5,,}
+					if [[ $md5 = ${sum_md5:0:$md5_len} ]] ; then
+						checkout_path="$cpee_home/$dir/$root"
+						echo $checkout_path
+						break
+					fi
 				fi
 
 			fi
@@ -60,9 +145,21 @@ cpee_checkout(){
 
 		if [[ -n $checkout_path ]] ; then
 			cp -i -a $checkout_path .
+			cp_ret=$?
+			if [[ $cp_ret -ne 0 ]] ; then
+				echo -e "\e[34mFailed.\e[0m\n"
+				exit $cp_ret
+			else
+				echo -e "\e[32mSuccess.\e[0m\n"
+				echo "Checked out $(basename $checkout_path) here."
+			fi
 			break
 		fi
 	done
+
+	if [[ -z $checkout_path ]] ; then
+		echo "XXX No such file that has $md5 found."
+	fi
 }
 
 update_log_cache(){
@@ -276,8 +373,8 @@ if [[ $# -eq 0 ]]; then
 	echo "MAXSIZE=$maxsize" >> $cpee_home/config
 
 elif [[ $# -eq 1 ]]; then
+# Subcommand
 
-	# Subcommand
 	sub=$1
 	case $sub in
 	read|log|show|head)
@@ -289,6 +386,10 @@ elif [[ $# -eq 1 ]]; then
 	checkout|take)
 		sub="checkout"
 		cpee_checkout
+		;;
+	search|find)
+		sub="search"
+		cpee_search
 		;;
 	*)
 		:
