@@ -3,3 +3,7 @@ This is to run cp command and backup files with log message at the same time. Th
 
 `cpee` has git-log-like feature to read the past logs you copied by giving subcommand `read` or `show`. You can get only head of the log by `head`. Several functions help you not to forget leaving logs, etc.
 
+The root diretories containing copied files has the sudo hash value calcurated by summing all the hash values of files under it. Thus, the sudo hash value of directories should be same if the files under it are not changed.
+
+You can see the subcommands supported by cpee with help subcommand or --help option.
+
