@@ -492,7 +492,7 @@ else
 		fi
 		cp -a "$src" "$cpee_dir"
 		if [[ -f $src ]] ; then
-			chmod 400 "$cpee_dir/$src"
+			chmod 400 "$cpee_dir/$(basename $src)"
 		else
 			chmod 500 "$cpee_dir/$src"
 		fi
