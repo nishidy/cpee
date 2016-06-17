@@ -7,3 +7,6 @@ The root directories containing copied files have the sudo hash value calcurated
 
 You can see the subcommands supported by cpee with help subcommand or --help option.
 
+# Environment
+Linux
+
