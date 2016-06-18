@@ -20,9 +20,10 @@ cpee_help(){
 	echo ""
 }
 
+
 cpee_search(){
-	echo -n "Which one do you want to search? [md5] : "
-	read md5
+
+	md5=$1
 	md5_len=${#md5}
 
 	echo ""
@@ -98,8 +99,8 @@ cpee_search(){
 }
 
 cpee_checkout(){
-	echo -n "Which one do you want to checkout? [md5] : "
-	read md5
+
+	md5=$1
 	md5_len=${#md5}
 
 	checkout_path=""
@@ -356,6 +357,34 @@ get_abs_dirname(){
 	fi
 }
 
+cpee_subcommand(){
+
+	case $1 in
+	read|log|show|head)
+		if [[ $1 = "log" ]]; then
+			sub="read"
+		else
+			sub=$1
+		fi
+		cpee_read $sub
+		;;
+	checkout|take)
+		cpee_checkout $2
+		;;
+	search|find)
+		cpee_search $2
+		;;
+	help|--help)
+		cpee_help
+		;;
+	*)
+		echo "!!! No such subcommand is supported ($1)."
+		cpee_help
+		;;
+	esac
+
+}
+
 if [[ $# -eq 0 ]]; then
 
 	# XXX Envirnoment variable is better than config file?
@@ -388,34 +417,17 @@ if [[ $# -eq 0 ]]; then
 	echo "MAXTIME=$maxtime" > $cpee_home/config
 	echo "MAXSIZE=$maxsize" >> $cpee_home/config
 
-elif [[ $# -eq 1 ]]; then
-# Subcommand
-
-	sub=$1
-	case $sub in
-	read|log|show|head)
-		if [[ $sub = "log" ]]; then
-			sub="read"
-		fi
-		cpee_read $sub
-		;;
-	checkout|take)
-		sub="checkout"
-		cpee_checkout
-		;;
-	search|find)
-		sub="search"
-		cpee_search
-		;;
-	help|--help)
-		cpee_help
-		;;
-	*)
-		:
-		;;
-	esac
-
 else
+
+	if [[ $1 =~ ^-- ]] ; then
+		cpee_subcommand ${1:2} $2
+		exit 0
+	fi
+
+	if [[ $# -eq 1 ]]; then
+		echo "!!! One more argument is needed at least."
+		exit 1
+	fi
 
 	if [[ ! -f $cpee_home/config ]]; then
 		echo "!!! You need to run this command without any argument first."
