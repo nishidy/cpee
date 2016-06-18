@@ -359,6 +359,8 @@ get_abs_dirname(){
 
 cpee_subcommand(){
 
+	not_cpee_subcommand=0
+
 	case $1 in
 	read|log|show|head)
 		if [[ $1 = "log" ]]; then
@@ -378,10 +380,13 @@ cpee_subcommand(){
 		cpee_help
 		;;
 	*)
-		echo "!!! No such subcommand is supported ($1)."
-		cpee_help
+		not_cpee_subcommand=1
 		;;
 	esac
+
+	if [[ $not_cpee_subcommand -eq 0 ]] ; then
+		exit 0
+	fi
 
 }
 
@@ -421,7 +426,6 @@ else
 
 	if [[ $1 =~ ^-- ]] ; then
 		cpee_subcommand ${1:2} $2
-		exit 0
 	fi
 
 	if [[ $# -eq 1 ]]; then
