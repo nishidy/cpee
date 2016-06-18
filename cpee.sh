@@ -12,11 +12,11 @@ cpee_help(){
 	echo "If cpee takes only one argument, the first argument is treated as subcommand."
 	echo ""
 	echo "cpee subcommands : "
-	echo "    log|read : See the history of copies, attributes of copies and the associated logs with less."
-	echo "    show     : Same as log, but without less."
-	echo "    head     : Show the only latest log."
-	echo "    checkout : Put the copy from the history on the current directory specified by hash value of md5 without implicit overwritten."
-	echo "    search   : Show the files or directories which have the same hash value of md5."
+	echo "    --log  : See the history of copies, attributes of copies and the associated logs with less."
+	echo "    --show : Same as log, but without less."
+	echo "    --head : Show the only latest log."
+	echo "    --checkout [hash] : Put the copy from the history on the current directory specified by hash value of md5 without implicit overwritten."
+	echo "    --search [hash]   : Show the files or directories which have the same hash value of md5."
 	echo ""
 }
 
