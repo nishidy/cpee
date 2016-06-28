@@ -5,6 +5,15 @@ if [[ ${BASH_VERSINFO[0]} -lt 4 ]]; then
 	exit 1
 fi
 
+if [[ "root" = $(whoami) ]]; then
+	if [[ "/root" = $HOME ]]; then
+		echo "XXX Do not run cpee by root without having \$HOME environment of an user."
+		exit 1
+	else
+		real_user=$(basename $HOME)
+	fi
+fi
+
 cpee_home="$HOME/.cpee"
 
 cpee_help(){
@@ -498,6 +507,10 @@ else
 
 	cpee_dir=$cpee_home/`date +%Y%m%d%H%M%S`
 	mkdir $cpee_dir
+
+	if [[ "root" = $(whoami) ]]; then
+		chown $real_user:$real_user $cpee_dir
+	fi
 
 	src_repl=""
 	for src in "${@:1:$num_src}" ; do
