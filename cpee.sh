@@ -380,9 +380,17 @@ cpee_subcommand(){
 		cpee_read $sub
 		;;
 	checkout|take)
+		if [[ $# -ne 2 ]]; then
+			echo "XXX You need to give hash to checkout the file."
+			exit 1
+		fi
 		cpee_checkout $2
 		;;
 	search|find)
+		if [[ $# -ne 2 ]]; then
+			echo "XXX You need to give hash to find the file."
+			exit 1
+		fi
 		cpee_search $2
 		;;
 	help|--help)
