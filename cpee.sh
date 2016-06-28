@@ -508,7 +508,7 @@ else
 		fi
 		cp -a "$src" "$cpee_dir"
 		if [[ -f $src ]] ; then
-			chmod 400 "$cpee_dir/$(basename $src)"
+			chmod 400 $cpee_dir/$(basename "$src")
 		else
 			chmod 500 "$cpee_dir/$src"
 		fi
@@ -531,7 +531,8 @@ else
 		dst_dir=0
 	fi
 
-	echo "Source directory : $(dirname $src_repl)"
+	src_dir=$(dirname "$src_repl")
+	echo "Source directory : $src_dir"
 	for src in "${@:1:$num_src}" ; do
 		if [[ ${src:0:1} == '-' ]]; then
 			continue
@@ -552,7 +553,7 @@ else
 				continue
 			fi
 			if [[ -f $src ]]; then
-				ls -l "$dst/$(basename $src)"
+				ls -l "$dst"/$(basename "$src")
 			else
 				ls -lR "$dst"
 			fi
