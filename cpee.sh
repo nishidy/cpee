@@ -267,7 +267,9 @@ cpee_read(){
 		buf="${buf}\e[33mLog   :\e[0m $log\n" # may include LF
 		buf="${buf}\e[33mFiles : [md5 name size]\e[0m\n"
 
-		for save in $(ls | grep -v log | grep -v path) ; do
+		_IFS=$IFS
+		IFS=$'\n'
+		for save in "$(ls | grep -v log | grep -v path)" ; do
 
 			if [[ -f $save ]] ; then
 				file=$save
@@ -302,6 +304,7 @@ cpee_read(){
 			fi
 
 		done
+		IFS=$_IFS
 
 		buf="${buf}\n"
 
