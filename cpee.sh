@@ -343,8 +343,7 @@ get_sum_size() {
 		fi
 		line=$(ls -1sFk $file)
 		ksize=$(echo $line | awk '{print $1}')
-		size=${ksize:0:-1} # remove the last 'K'
-		sum=$((sum + size))
+		sum=$((sum + ksize))
 	done
 	echo $((sum / 1000))
 }
@@ -461,16 +460,16 @@ else
 		exit 1
 	fi
 
-	sum_size=$(get_sum_size "${@:1:$num_src}")
-	maxsize=$(grep "MAXSIZE" $cpee_home/config | awk -F '=' '{print $2}')
-	if [[ $sum_size -gt $maxsize ]]; then
-		echo "!!! Reached to the maximum limit of the size of files. Aborted."
-		exit 1
-	fi
-
 	argc=$#
 	num_src=$((argc-1))
 	idx_dst=$((argc)) # The last one must be destination
+
+	sum_size=$(get_sum_size "${@:1:$num_src}")
+	maxsize=$(grep "MAXSIZE" $cpee_home/config | awk -F '=' '{print $2}')
+	if [[ $sum_size -gt $maxsize ]]; then
+		echo "!!! Reached to the maximum limit size of files (${sum_size}MB > ${maxsize}MB). Aborted."
+		exit 1
+	fi
 
 	n=1
 	for src in "${@:1:$num_src}" ; do
