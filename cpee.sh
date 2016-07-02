@@ -335,17 +335,21 @@ get(){
 }
 
 get_sum_size() {
-	sum=0
+	local sum=0
 	# "$@" keeps the list of complete full path of source files
-	for file in "$@" ; do
-		if echo "$file" | grep /$ > /dev/null; then
-			continue
+	for node in "$@" ; do
+		if [[ -d $node ]]; then
+			pushd $node > /dev/null
+			files=$(ls $file)
+			sum_dir=$(get_sum_size $files)
+			popd > /dev/null
+			sum=$((sum + sum_dir))
+		elif [[ -f $node ]]; then
+			ksize=$(ls -1sFk $node | awk '{print $1}')
+			sum=$((sum + ksize))
 		fi
-		line=$(ls -1sFk $file)
-		ksize=$(echo $line | awk '{print $1}')
-		sum=$((sum + ksize))
 	done
-	echo $((sum / 1000))
+	echo $sum
 }
 
 get_abs_dirname(){
@@ -464,7 +468,12 @@ else
 	num_src=$((argc-1))
 	idx_dst=$((argc)) # The last one must be destination
 
+	_IFS=$IFS
+	IFS=$'\n'
 	sum_size=$(get_sum_size "${@:1:$num_src}")
+	sum_size=$((sum_size / 1000))
+	IFS=$_IFS
+
 	maxsize=$(grep "MAXSIZE" $cpee_home/config | awk -F '=' '{print $2}')
 	if [[ $sum_size -gt $maxsize ]]; then
 		echo "!!! Reached to the maximum limit size of files (${sum_size}MB > ${maxsize}MB). Aborted."
