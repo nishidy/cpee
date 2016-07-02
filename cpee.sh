@@ -6,10 +6,7 @@ if [[ ${BASH_VERSINFO[0]} -lt 4 ]]; then
 fi
 
 if [[ "root" = $(whoami) ]]; then
-	if [[ "/root" = $HOME ]]; then
-		echo "XXX Do not run cpee by root without having \$HOME environment of an user."
-		exit 1
-	else
+	if [[ "/root" != $HOME ]]; then
 		real_user=$(basename $HOME)
 	fi
 fi
