@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <dirent.h>
+#include <time.h>
 
 #define SIZE 65535
 #define PNAME 4096
@@ -53,7 +54,7 @@ void copy_file_to_file(char* from, char* to){
 					size = read(fd_from,buf,SIZE);
 					switch(size){
 						case -1:
-							printf("copy_file_to_file\n");
+							printf("copy_file_to_file : %s, %s\n",from,to);
 							show_errno();
 						case 0:
 							close(fd_to);
@@ -61,7 +62,7 @@ void copy_file_to_file(char* from, char* to){
 							break;
 						default:
 							if(write(fd_to,buf,size) == -1){
-								printf("copy_file_to_file!\n");
+								printf("copy_file_to_file : %s, %s\n",from,to);
 								show_errno();
 							}
 							break;
@@ -69,11 +70,11 @@ void copy_file_to_file(char* from, char* to){
 					if(size==0) break;
 				}
 			}else{
-				printf("copy_file_to_file\n");
+				printf("copy_file_to_file : %s, %s\n",from,to);
 				show_errno();
 			}
 		}else{
-			printf("copy_file_to_file\n");
+			printf("copy_file_to_file : %s, %s\n",from,to);
 			show_errno();
 		}
 
@@ -176,13 +177,20 @@ void get_backup_dir(char timestamp[], char* to_path){
 
 void cpee_to_dir(int argc, char* argv[]){
 	char to_path[PNAME];
-	get_backup_dir("20170301",to_path);
+	time_t timer;
+	struct tm* local;
+	timer = time(NULL);
+	local = localtime(&timer);
+	char date[FNAME];
+	sprintf(date,"%d%02d%02d%02d%02d%02d",local->tm_year+1900,local->tm_mon+1,local->tm_mday,local->tm_hour,local->tm_min,local->tm_sec);
+	get_backup_dir(date,to_path);
+	mkdir(to_path,0777); // umask works here
 
 	copy_to_dir(argc,argv);
-	memcpy(argv[argc-1],to_path,PNAME);
+
+	sprintf(argv[argc-1],"%s/",to_path);
 	copy_to_dir(argc,argv);
 }
-
 
 void cpee_file_to_file(char* from, char* to){
 	char to_path[PNAME];
@@ -196,6 +204,7 @@ void cpee_file_to_file(char* from, char* to){
 	sprintf(to_file,"%s/%s",to_path,from_file);
 	copy_file_to_file(from,to_file);
 }
+
 
 int main(int argc, char* argv[]){
 
