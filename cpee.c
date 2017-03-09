@@ -13,6 +13,8 @@
 #define PNAME 4096
 #define FNAME 1024
 
+int g_upperbackupsize;
+
 void show_errno(){
 	fprintf(stderr,"errorno: %d\n",errno);
 	exit(-1);
@@ -48,6 +50,9 @@ void copy_file_to_file(char* from, char* to){
 	}else{
 		if( stat(from,&s) == -1 )
 			show_errno();
+
+		if(g_upperbackupsize < s.st_size)
+			return;
 
 		if((fd_to=open(to,O_CREAT|O_WRONLY,s.st_mode)) != -1){
 			if((fd_from=open(from,O_RDONLY)) != -1){
@@ -176,6 +181,14 @@ void get_backup_dir(char timestamp[], char* to_path){
 	sprintf(to_path,"%s/%s/",backdir,timestamp);
 }
 
+void get_backup_size(){
+	char* backsize;
+	if((backsize=getenv("CPEEBACKUPSIZE"))==NULL){
+		g_upperbackupsize = 1024*1024; // 1MB
+	}else{
+		g_upperbackupsize = atoi(backsize);
+	}
+}
 
 void get_date(char date[]){
 	time_t timer;
@@ -212,6 +225,8 @@ void cpee_to_dir(int argc, char* argv[]){
 	get_backup_dir(date,to_path);
 	mkdir(to_path,0777); // umask works here
 
+	get_backup_size();
+
 	copy_to_dir(argc,argv);
 
 	sprintf(argv[argc-1],"%s/",to_path);
@@ -227,6 +242,8 @@ void cpee_file_to_file(char* from, char* to){
 	char to_path[PNAME];
 	get_backup_dir(date,to_path);
 	mkdir(to_path,0777); // umask works here
+
+	get_backup_size();
 
 	char to_file[PNAME];
 	copy_file_to_file(from,to);
