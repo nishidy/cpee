@@ -23,6 +23,7 @@ x/y
 x/y/z
 x/y/z/file4
 x/file3
+$ export CPEEBACKUPDIR=./backup
 $ ./cpee a x to
 MD5 = 0cc175b9c0f1b6a831c399e269772661
 $ find to/
@@ -35,4 +36,16 @@ to/y/z
 to/y/z/file4
 to/file1
 to/file3
+$ ls $CPEEBACKUPDIR
+20170309201221  20170309201231  20170309202603  20170309203329  20170309203513  20170310075037
+$ find $CPEEBACKUPDIR/20170310075037
+./backup/20170310075037
+./backup/20170310075037/b
+./backup/20170310075037/b/c
+./backup/20170310075037/b/c/file2
+./backup/20170310075037/y
+./backup/20170310075037/y/z
+./backup/20170310075037/y/z/file4
+./backup/20170310075037/file1
+./backup/20170310075037/file3
 ```
