@@ -210,7 +210,7 @@ int main(int argc, char* argv[]){
 			if( is_last_arg_dir(argc,argv) ) {
 				cpee_to_dir(argc,argv);
 			}else{
-				copy_file_to_file(argv[1],argv[2]);
+				cpee_file_to_file(argv[1],argv[2]);
 			}
 			break;
 		default:
