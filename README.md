@@ -10,3 +10,29 @@ You can see the subcommands supported by cpee with --help subcommand.
 # Environment
 Linux
 
+```
+$ find a
+a
+a/b
+a/b/c
+a/b/c/file2
+a/file1
+$ find x
+x
+x/y
+x/y/z
+x/y/z/file4
+x/file3
+$ ./cpee a x to
+MD5 = 0cc175b9c0f1b6a831c399e269772661
+$ find to/
+to/
+to/b
+to/b/c
+to/b/c/file2
+to/y
+to/y/z
+to/y/z/file4
+to/file1
+to/file3
+```
