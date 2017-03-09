@@ -26,8 +26,8 @@ int is_file_exist(char* path){
 				show_errno();
 		}
 	}else{
-		if( !(s.st_mode && S_IFMT) ){
-			fprintf(stderr,"is_file_exist: st_mode is not S_IFMT.\n");
+		if( !(S_ISREG(s.st_mode)) ){
+			fprintf(stderr,"is_file_exist: st_mode is not S_IFREG.\n");
 			show_errno();
 		}
 	}
@@ -145,13 +145,12 @@ void copy_to_dir(int argc, char* argv[]){
 	struct stat s;
 	for(i=1;i<argc-1;i++){
 		sprintf(from,"%s",argv[i]);
-		if( stat(argv[i],&s) == -1 ){
-			if ( s.st_mode && S_IFMT ){
+		if( stat(argv[i],&s) == 0 ){
+			if( S_ISREG(s.st_mode) )
 				copy_file_to_dir(argv[i],argv[argc-1]);
-			}
-			if ( s.st_mode && S_IFDIR ){
+
+			if( S_ISDIR(s.st_mode) )
 				copy_dir_to_dir(argv[i],argv[argc-1]);
-			}
 		}else{
 			show_errno();
 		}
@@ -161,7 +160,7 @@ void copy_to_dir(int argc, char* argv[]){
 int is_last_arg_dir(int argc, char* argv[]){
 	struct stat s;
 	if( stat(argv[argc-1],&s) == 0 ){
-		if ( s.st_mode && S_IFDIR )
+		if( S_ISDIR(s.st_mode) )
 			return 1;
 	}
 	return 0;
@@ -179,6 +178,7 @@ int main(int argc, char* argv[]){
 			break;
 		case 3:
 			if( is_last_arg_dir(argc,argv) ) {
+				printf("aaa\n");
 				copy_to_dir(argc,argv);
 			}else{
 				copy_file_to_file(argv[1],argv[2]);
