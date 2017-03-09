@@ -175,14 +175,24 @@ void get_backup_dir(char timestamp[], char* to_path){
 	sprintf(to_path,"%s/%s/",backdir,timestamp);
 }
 
-void cpee_to_dir(int argc, char* argv[]){
-	char to_path[PNAME];
+
+void get_date(char date[]){
 	time_t timer;
 	struct tm* local;
 	timer = time(NULL);
 	local = localtime(&timer);
+
+	sprintf(date,"%d%02d%02d%02d%02d%02d",
+			local->tm_year+1900,local->tm_mon+1,local->tm_mday,
+			local->tm_hour,local->tm_min,local->tm_sec);
+
+}
+
+void cpee_to_dir(int argc, char* argv[]){
 	char date[FNAME];
-	sprintf(date,"%d%02d%02d%02d%02d%02d",local->tm_year+1900,local->tm_mon+1,local->tm_mday,local->tm_hour,local->tm_min,local->tm_sec);
+	get_date(date);
+
+	char to_path[PNAME];
 	get_backup_dir(date,to_path);
 	mkdir(to_path,0777); // umask works here
 
@@ -193,8 +203,11 @@ void cpee_to_dir(int argc, char* argv[]){
 }
 
 void cpee_file_to_file(char* from, char* to){
+	char date[FNAME];
+	get_date(date);
+
 	char to_path[PNAME];
-	get_backup_dir("20170301",to_path);
+	get_backup_dir(date,to_path);
 
 	char to_file[PNAME];
 	copy_file_to_file(from,to);
