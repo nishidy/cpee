@@ -239,15 +239,50 @@ void cpee_file_to_file(char* from, char* to){
 	register_hash(from);
 }
 
+void copy_from_backup(char* date){
+	char to_path[PNAME];
+	get_backup_dir(date,to_path);
+
+	struct stat s;
+	if( stat(to_path,&s) == 0 ){
+		if( !S_ISDIR(s.st_mode) )
+			show_errno();
+	}else{
+		printf("no backups of the date %s.\n",date);
+		exit(-1);
+	}
+
+	copy_dir_to_dir(to_path,".");
+}
+
+void show_backups(){
+	char* backdir;
+	if((backdir=getenv("CPEEBACKUPDIR"))==NULL)
+		show_errno();
+
+	DIR *dir;
+	if((dir=opendir(backdir))==NULL)
+		show_errno();
+
+	struct dirent *dp;
+	for(dp=readdir(dir);dp!=NULL;dp=readdir(dir)){
+		if(strncmp(dp->d_name,"..",2)==0 || strncmp(dp->d_name,".",1)==0)
+			continue;
+		printf("%s\n",dp->d_name);
+	}
+}
+
 
 int main(int argc, char* argv[]){
 
 	switch(argc){
 		case 0:
-		case 1:
-		case 2:
-			printf("not enough arguments.\n");
 			exit(-1);
+		case 1:
+			show_backups();
+			break;
+		case 2:
+			copy_from_backup(argv[1]);
 			break;
 		case 3:
 			if( is_last_arg_dir(argc,argv) ) {
