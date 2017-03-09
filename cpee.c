@@ -8,6 +8,7 @@
 #include <dirent.h>
 
 #define SIZE 65535
+#define PNAME 4096
 #define FNAME 1024
 
 void show_errno(){
@@ -166,6 +167,35 @@ int is_last_arg_dir(int argc, char* argv[]){
 	return 0;
 }
 
+void get_backup_dir(char timestamp[], char* to_path){
+	char* backdir;
+	if((backdir=getenv("CPEEBACKUPDIR"))==NULL)
+		show_errno();
+	sprintf(to_path,"%s/%s/",backdir,timestamp);
+}
+
+void cpee_to_dir(int argc, char* argv[]){
+	char to_path[PNAME];
+	get_backup_dir("20170301",to_path);
+
+	copy_to_dir(argc,argv);
+	memcpy(argv[argc-1],to_path,PNAME);
+	copy_to_dir(argc,argv);
+}
+
+
+void cpee_file_to_file(char* from, char* to){
+	char to_path[PNAME];
+	get_backup_dir("20170301",to_path);
+
+	char to_file[PNAME];
+	copy_file_to_file(from,to);
+
+	char from_file[FNAME] = {"\0"};
+	get_file_name(from,from_file);
+	sprintf(to_file,"%s/%s",to_path,from_file);
+	copy_file_to_file(from,to_file);
+}
 
 int main(int argc, char* argv[]){
 
@@ -178,14 +208,14 @@ int main(int argc, char* argv[]){
 			break;
 		case 3:
 			if( is_last_arg_dir(argc,argv) ) {
-				copy_to_dir(argc,argv);
+				cpee_to_dir(argc,argv);
 			}else{
 				copy_file_to_file(argv[1],argv[2]);
 			}
 			break;
 		default:
 			if( is_last_arg_dir(argc,argv) ) {
-				copy_to_dir(argc,argv);
+				cpee_to_dir(argc,argv);
 			}else{
 				printf("the last argument must be directory if you give more than 3 args.\n");
 				exit(-1);
