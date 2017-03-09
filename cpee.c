@@ -107,7 +107,6 @@ void copy_files_to_dir(int argc, char* argv[]){
 		if(is_file_exist(from)){
 			copy_file_to_dir(from,argv[argc-1]);
 		}
-
 	}
 }
 
@@ -140,29 +139,28 @@ void copy_dir_to_dir(char* from, char* to){
 	}
 }
 
-
-int is_first_arg_file(int argc, char* argv[]){
+void copy_to_dir(int argc, char* argv[]){
+	int i;
+	char from[FNAME] = {'\0'};
 	struct stat s;
-	if( stat(argv[1],&s) == 0 ){
-		if ( s.st_mode && S_IFMT )
-			return 1;
+	for(i=1;i<argc-1;i++){
+		sprintf(from,"%s",argv[i]);
+		if( stat(argv[i],&s) == -1 ){
+			if ( s.st_mode && S_IFMT ){
+				copy_file_to_dir(argv[i],argv[argc-1]);
+			}
+			if ( s.st_mode && S_IFDIR ){
+				copy_dir_to_dir(argv[i],argv[argc-1]);
+			}
+		}else{
+			show_errno();
+		}
 	}
-	return 0;
 }
-
 
 int is_last_arg_dir(int argc, char* argv[]){
 	struct stat s;
 	if( stat(argv[argc-1],&s) == 0 ){
-		if ( s.st_mode && S_IFDIR )
-			return 1;
-	}
-	return 0;
-}
-
-int is_first_arg_dir(int argc, char* argv[]){
-	struct stat s;
-	if( stat(argv[1],&s) == 0 ){
 		if ( s.st_mode && S_IFDIR )
 			return 1;
 	}
@@ -180,24 +178,15 @@ int main(int argc, char* argv[]){
 			exit(-1);
 			break;
 		case 3:
-			if( !is_first_arg_file(argc,argv) ) {
-				printf("the first argument must be file.\n");
-				exit(-1);
-			}
-
 			if( is_last_arg_dir(argc,argv) ) {
-				if( is_first_arg_dir(argc,argv) ) {
-					copy_dir_to_dir(argv[1],argv[2]);
-				}else{
-					copy_file_to_dir(argv[1],argv[2]);
-				}
+				copy_to_dir(argc,argv);
 			}else{
 				copy_file_to_file(argv[1],argv[2]);
 			}
 			break;
 		default:
 			if( is_last_arg_dir(argc,argv) ) {
-				copy_files_to_dir(argc,argv);
+				copy_to_dir(argc,argv);
 			}else{
 				printf("the last argument must be directory if you give more than 3 args.\n");
 				exit(-1);
