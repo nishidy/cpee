@@ -260,18 +260,20 @@ void show_backups(){
 	if((backdir=getenv("CPEEBACKUPDIR"))==NULL)
 		show_errno();
 
-	struct dirent **namelist;
+	struct dirent **nl;
 	int n;
 
-	n = scandir(backdir,&namelist,NULL,alphasort);
+	n = scandir(backdir,&nl,NULL,alphasort);
 	if(n<0)
 		perror("scandir");
 	else {
 		while(n--){
-			printf("%s\n",namelist[n]->d_name);
-			free(namelist[n]);
+			if(strncmp(nl[n]->d_name,"..",2)==0 || strncmp(nl[n]->d_name,".",1)==0)
+				continue;
+			printf("%s\n",nl[n]->d_name);
+			free(nl[n]);
 		}
-		free(namelist);
+		free(nl);
 	}
 }
 
