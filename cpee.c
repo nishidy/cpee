@@ -178,7 +178,6 @@ int main(int argc, char* argv[]){
 			break;
 		case 3:
 			if( is_last_arg_dir(argc,argv) ) {
-				printf("aaa\n");
 				copy_to_dir(argc,argv);
 			}else{
 				copy_file_to_file(argv[1],argv[2]);
