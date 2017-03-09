@@ -7,6 +7,7 @@
 #include <string.h>
 #include <dirent.h>
 #include <time.h>
+#include <openssl/md5.h>
 
 #define SIZE 65535
 #define PNAME 4096
@@ -188,6 +189,21 @@ void get_date(char date[]){
 
 }
 
+void register_hash(char* from){
+	MD5_CTX c;
+	MD5_Init(&c);
+	MD5_Update(&c,from,strlen(from));
+	unsigned char md[MD5_DIGEST_LENGTH];
+	MD5_Final(md,&c);
+
+	char mdstr[33];
+	int i;
+	for(i=0;i<16;i++)
+		sprintf(&mdstr[i*2],"%02x",(unsigned int)md[i]);
+
+	printf("MD5 = %s\n",mdstr);
+}
+
 void cpee_to_dir(int argc, char* argv[]){
 	char date[FNAME];
 	get_date(date);
@@ -200,6 +216,8 @@ void cpee_to_dir(int argc, char* argv[]){
 
 	sprintf(argv[argc-1],"%s/",to_path);
 	copy_to_dir(argc,argv);
+
+	register_hash(argv[1]);
 }
 
 void cpee_file_to_file(char* from, char* to){
@@ -208,6 +226,7 @@ void cpee_file_to_file(char* from, char* to){
 
 	char to_path[PNAME];
 	get_backup_dir(date,to_path);
+	mkdir(to_path,0777); // umask works here
 
 	char to_file[PNAME];
 	copy_file_to_file(from,to);
@@ -216,6 +235,8 @@ void cpee_file_to_file(char* from, char* to){
 	get_file_name(from,from_file);
 	sprintf(to_file,"%s/%s",to_path,from_file);
 	copy_file_to_file(from,to_file);
+
+	register_hash(from);
 }
 
 
