@@ -315,16 +315,18 @@ void shift_arguments(int idx, int argc, char* argv[]){
 int main(int argc, char* argv[]){
 
 	init_option();
-	int i;
-	for(i=1;i<argc;i++){
+	int i=1;
+	while(i<argc){
 		switch(argv[i][0]){
 			case '-':
 				if(strncmp(argv[i],"-l",2)==0){
 					g_argoption.hardlink = 1;
 				}
 				shift_arguments(i,argc,argv);
+				argc--;
 				break;
 			default:
+				i++;
 				break;
 		}
 	}
