@@ -9,10 +9,15 @@
 #include <time.h>
 #include <openssl/md5.h>
 
-#define SIZE 65535
+#define SIZE  65535
 #define PNAME 4096
 #define FNAME 1024
 
+struct option {
+	int hardlink;
+};
+
+struct option g_argoption;
 int g_upperbackupsize;
 
 void show_errno(){
@@ -87,6 +92,10 @@ void copy_file_to_file(char* from, char* to){
 	}
 }
 
+void copy_file_to_link(char* from, char* to){
+	link(from,to);
+}
+
 void get_file_name(char* path, char* file_name){
 	char* token;
 	char* saveptr;
@@ -104,7 +113,11 @@ void copy_file_to_dir(char* from, char* to){
 	char from_file[FNAME] = {"\0"};
 	get_file_name(from,from_file);
 	sprintf(to_full,"%s/%s",to,from_file);
-	copy_file_to_file(from,to_full);
+	if(g_argoption.hardlink){
+		copy_file_to_link(from,to_full);
+	}else{
+		copy_file_to_file(from,to_full);
+	}
 }
 
 void copy_dir_to_dir(char* from, char* to){
@@ -235,7 +248,11 @@ void cpee_file_to_file(char* from, char* to){
 	get_backup_size();
 
 	char to_file[PNAME];
-	copy_file_to_file(from,to);
+	if(g_argoption.hardlink){
+		copy_file_to_link(from,to);
+	}else{
+		copy_file_to_file(from,to);
+	}
 
 	char from_file[FNAME] = {"\0"};
 	get_file_name(from,from_file);
@@ -284,7 +301,33 @@ void show_backups(){
 }
 
 
+void init_option(){
+	g_argoption.hardlink = 0;
+}
+
+void shift_arguments(int idx, int argc, char* argv[]){
+	int i;
+	for(i=idx;i<argc-1;i++)
+		argv[i] = argv[i+1];
+
+}
+
 int main(int argc, char* argv[]){
+
+	init_option();
+	int i;
+	for(i=1;i<argc;i++){
+		switch(argv[i][0]){
+			case '-':
+				if(strncmp(argv[i],"-l",2)==0){
+					g_argoption.hardlink = 1;
+				}
+				shift_arguments(i,argc,argv);
+				break;
+			default:
+				break;
+		}
+	}
 
 	switch(argc){
 		case 0:
