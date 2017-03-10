@@ -107,17 +107,6 @@ void copy_file_to_dir(char* from, char* to){
 	copy_file_to_file(from,to_full);
 }
 
-void copy_files_to_dir(int argc, char* argv[]){
-	int i;
-	char from[FNAME] = {'\0'};
-	for(i=1;i<argc-1;i++){
-		sprintf(from,"%s",argv[i]);
-		if(is_file_exist(from)){
-			copy_file_to_dir(from,argv[argc-1]);
-		}
-	}
-}
-
 void copy_dir_to_dir(char* from, char* to){
 	DIR *dir;
 	if((dir=opendir(from))==NULL)
