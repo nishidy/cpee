@@ -5,77 +5,71 @@ void show_errno(){
 	exit(-1);
 }
 
-void recursive_write_archive(struct archive* a, const char *to_path){
+void commit_message(char* to_path, int argc, char** argv){
+	char commitfile[FNAME] = {'\0'};
+	sprintf(commitfile,"%s/.commit",to_path);
+	int fd = open(commitfile,O_CREAT|O_WRONLY,0400);
 
-	// copy_dir_to_dir
-	DIR *dir;
-	if((dir=opendir(to_path))==NULL)
-		show_errno();
+	int i=0;
+	char arg[FNAME];
+	while(i<argc){
+		memset(arg,'\0',FNAME);
+		sprintf(arg,"arg[%d] : ",i);
+		write(fd,arg,strlen(arg));
+		write(fd,argv[i],strlen(argv[i]));
+		write(fd,"\n",1);
+		i++;
+	}
 
-	struct dirent *dp;
-	char next_from[FNAME] = {'\0'};
-	char next_to[FNAME] = {'\0'};
+	write(fd,"\n",1);
+	write(fd,"commit : \n",10);
+	write(fd,g_argoption.commitmsg,strlen(g_argoption.commitmsg));
+	write(fd,"\n",1);
 
+	close(fd);
+}
+
+void archive_create(){
+	struct stat st;
+
+	g_archive = archive_write_new();
+	archive_write_add_filter_gzip(g_archive);
+	archive_write_set_format_pax_restricted(g_archive); // Note 1
+}
+
+void archive_register_filename(char* outname){
+	archive_write_open_filename(g_archive, outname);
+}
+
+void archive_add(char* from, char* to){
 	struct archive_entry *entry;
 	char buff[8192];
 	int len;
 	int fd;
-
 	struct stat s;
 
-	for(dp=readdir(dir);dp!=NULL;dp=readdir(dir)){
-		sprintf(next_from,"%s/%s",to_path,dp->d_name);
-		if(dp->d_type==DT_REG){
-			stat(next_from, &s);
-			entry = archive_entry_new(); // Note 2
-			archive_entry_set_pathname(entry, next_from);
-			archive_entry_copy_stat(entry,&s);
-			archive_write_header(a, entry);
-			fd = open(next_from, O_RDONLY);
-			len = read(fd, buff, sizeof(buff));
-			while ( len > 0 ) {
-			    archive_write_data(a, buff, len);
-			    len = read(fd, buff, sizeof(buff));
-			}
-			close(fd);
-			archive_entry_free(entry);
-		}
-		if(dp->d_type==DT_DIR){
-			if(strncmp(dp->d_name,"..",2)==0 || strncmp(dp->d_name,".",1)==0)
-				continue;
+	if(stat(from, &s)==-1)
+		show_errno();
 
-			sprintf(next_to,"%s/%s",to_path,dp->d_name);
-			if(stat(next_from,&s) == 0){
-				recursive_write_archive(a,next_to);
-			}else{
-				show_errno();
-			}
-		}
+	entry = archive_entry_new(); // Note 2
+	archive_entry_set_pathname(entry, to);
+	archive_entry_copy_stat(entry,&s);
+	archive_write_header(g_archive, entry);
+	fd = open(from, O_RDONLY);
+	len = read(fd, buff, sizeof(buff));
+	while ( len > 0 ) {
+	    archive_write_data(g_archive, buff, len);
+	    len = read(fd, buff, sizeof(buff));
 	}
-
+	close(fd);
+	archive_entry_free(entry);
 }
 
-void write_archive(char *outname, char *to_path)
-{
-	struct archive *a;
-	struct stat st;
-
-	a = archive_write_new();
-	archive_write_add_filter_gzip(a);
-	archive_write_set_format_pax_restricted(a); // Note 1
-	archive_write_open_filename(a, outname);
-
-	recursive_write_archive(a, to_path);
-
-	archive_write_close(a); // Note 4
-	archive_write_free(a); // Note 5
+void archive_close(){
+	archive_write_close(g_archive); // Note 4
+	archive_write_free(g_archive); // Note 5
 }
 
-void comp_backup(char* to_path){
-	char archive[FNAME];
-	sprintf(archive,"%s.tar.gz",to_path);
-	write_archive(archive,to_path);
-}
 
 int is_file_exist(char* path){
 	struct stat s;
@@ -109,6 +103,18 @@ void get_file_name(char* path, char* file_name){
 	}
 }
 
+void remove_top_dir(char* path, char* removed_path){
+	char* token;
+	char* saveptr;
+	char copy[FNAME] = {"\0"};
+	memcpy(copy,path,FNAME);
+	token = strtok_r(copy,"/",&saveptr);
+	if(token!=NULL){
+		token=token+strlen(token)+1;
+		sprintf(removed_path,"%s",token);
+	}
+}
+
 int is_last_arg_dir(int argc, char* argv[]){
 	struct stat s;
 	if( stat(argv[argc-1],&s) == 0 ){
@@ -118,7 +124,7 @@ int is_last_arg_dir(int argc, char* argv[]){
 	return 0;
 }
 
-void get_backup_dir(char timestamp[], char* to_path){
+void get_backup_dir(char* timestamp, char* to_path){
 	char* backdir;
 	if((backdir=getenv("CPEEBACKUPDIR"))==NULL)
 		show_errno();
@@ -134,13 +140,19 @@ void get_backup_size(){
 	}
 }
 
-void get_date(char date[]){
+char* return_backupdate(){
+	return g_backupdate;
+}
+
+void set_backupdate(){
 	time_t timer;
 	struct tm* local;
 	timer = time(NULL);
 	local = localtime(&timer);
 
-	sprintf(date,"%d%02d%02d%02d%02d%02d",
+	g_backupdate = (char*)calloc(16,sizeof(char));
+
+	sprintf(g_backupdate,"%d%02d%02d%02d%02d%02d",
 			local->tm_year+1900,local->tm_mon+1,local->tm_mday,
 			local->tm_hour,local->tm_min,local->tm_sec);
 
@@ -168,35 +180,59 @@ void register_hash(char* from){
 }
 
 void cpee_to_dir(int argc, char* argv[]){
-	char date[FNAME];
-	get_date(date);
+	set_backupdate();
+
+	if(g_argoption.compbackup)
+		archive_create();
 
 	char to_path[PNAME];
-	get_backup_dir(date,to_path);
+	get_backup_dir(return_backupdate(),to_path);
 	mkdir(to_path,0777); // umask works here
 
 	get_backup_size();
 
-	copy_to_dir(argc,argv);
+	char archive[FNAME] = {'\0'};
+	char file[FNAME] = {'\0'};
+	if(g_argoption.compbackup){
+		get_file_name(to_path,file);
+		sprintf(archive,"%s/%s.tar.gz",to_path,file);
+		printf("%s\n",archive);
+		archive_register_filename(archive);
+	}
 
-	sprintf(argv[argc-1],"%s/",to_path);
-	copy_to_dir(argc,argv);
+	copy_to_dir(argc,argv,argv[argc-1]);
+
+	if(!g_argoption.compbackup)
+		copy_to_dir(argc,argv,to_path);
 
 	if(g_argoption.compbackup)
-		comp_backup(to_path);
+		archive_close();
+
+	if(g_argoption.commitmsg)
+		commit_message(to_path,argc-2,++argv);
 
 	register_hash(argv[1]);
 }
 
 void cpee_file_to_file(char* from, char* to){
-	char date[FNAME];
-	get_date(date);
+	set_backupdate();
+
+	if(g_argoption.compbackup)
+		archive_create();
 
 	char to_path[PNAME];
-	get_backup_dir(date,to_path);
+	get_backup_dir(return_backupdate(),to_path);
 	mkdir(to_path,0777); // umask works here
 
 	get_backup_size();
+
+	char archive[FNAME] = {'\0'};
+	char file[FNAME] = {'\0'};
+	if(g_argoption.compbackup){
+		get_file_name(to_path,file);
+		sprintf(archive,"%s/%s.tar.gz",to_path,file);
+		archive_register_filename(archive);
+	}
 
 	char to_file[PNAME];
 	if(g_argoption.hardlink){
@@ -206,12 +242,17 @@ void cpee_file_to_file(char* from, char* to){
 	}
 
 	char from_file[FNAME] = {"\0"};
-	get_file_name(from,from_file);
-	sprintf(to_file,"%s/%s",to_path,from_file);
-	copy_file_to_file(from,to_file);
+	if(!g_argoption.compbackup){
+		get_file_name(from,from_file);
+		sprintf(to_file,"%s/%s",to_path,from_file);
+		copy_file_to_file(from,to_file);
+	}
 
 	if(g_argoption.compbackup)
-		comp_backup(to_path);
+		archive_close();
+
+	if(g_argoption.commitmsg)
+		commit_message(to_path,1,&to);
 
 	register_hash(from);
 }
@@ -241,7 +282,7 @@ void show_backups(){
 void init_option(){
 	g_argoption.hardlink = 0;
 	g_argoption.compbackup = 0;
-	g_argoption.commitmessage = NULL;
+	g_argoption.commitmsg = NULL;
 }
 
 void shift_arguments(int idx, int* argc, char* argv[]){
@@ -249,7 +290,6 @@ void shift_arguments(int idx, int* argc, char* argv[]){
 	for(i=idx;i<(*argc)-1;i++)
 		argv[i] = argv[i+1];
 	(*argc)--;
-
 }
 
 int main(int argc, char* argv[]){
@@ -268,7 +308,7 @@ int main(int argc, char* argv[]){
 
 				if(strncmp(argv[i],"-m",2)==0){
 					shift_arguments(i,&argc,argv);
-					g_argoption.commitmessage = argv[i];
+					g_argoption.commitmsg = argv[i];
 				}
 
 				shift_arguments(i,&argc,argv);
@@ -297,6 +337,7 @@ int main(int argc, char* argv[]){
 			}else{
 				cpee_file_to_file(argv[1],argv[2]);
 			}
+
 			break;
 		default:
 			if( is_last_arg_dir(argc,argv) ) {
@@ -305,8 +346,10 @@ int main(int argc, char* argv[]){
 				printf("the last argument must be directory if you give more than 3 args.\n");
 				exit(-1);
 			}
-		break;
+
+			break;
 	}
+
 
 	return 0;
 }

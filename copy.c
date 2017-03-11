@@ -1,6 +1,13 @@
 #include "cpee.h"
 
 void copy_file_to_file(char* from, char* to){
+
+	char* to_archive[PNAME] = {'\0'};
+	if(g_argoption.compbackup){
+		remove_top_dir(to,to_archive);
+		archive_add(from,to_archive);
+	}
+
 	struct stat s;
 	char buf[SIZE];
 	int fd_from, fd_to, size;
@@ -92,7 +99,7 @@ void copy_dir_to_dir(char* from, char* to){
 	}
 }
 
-void copy_to_dir(int argc, char* argv[]){
+void copy_to_dir(int argc, char* argv[], char* backup){
 	int i;
 	char from[FNAME] = {'\0'};
 	struct stat s;
@@ -100,10 +107,10 @@ void copy_to_dir(int argc, char* argv[]){
 		sprintf(from,"%s",argv[i]);
 		if( stat(argv[i],&s) == 0 ){
 			if( S_ISREG(s.st_mode) )
-				copy_file_to_dir(argv[i],argv[argc-1]);
+				copy_file_to_dir(argv[i],backup);
 
 			if( S_ISDIR(s.st_mode) )
-				copy_dir_to_dir(argv[i],argv[argc-1]);
+				copy_dir_to_dir(argv[i],backup);
 		}else{
 			show_errno();
 		}
