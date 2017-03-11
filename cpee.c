@@ -22,7 +22,8 @@ void commit_message(char* to_path, int argc, char** argv){
 	}
 
 	write(fd,"\n",1);
-	write(fd,"commit : \n",10);
+	write(fd,"commit : ",9);
+	write(fd,"\n",1);
 	write(fd,g_argoption.commitmsg,strlen(g_argoption.commitmsg));
 	write(fd,"\n",1);
 
@@ -223,6 +224,12 @@ void show_backups(){
 	struct dirent **nl;
 	int n;
 
+	char commitfile[PNAME] = {'\0'};
+	char* buf = NULL;
+	FILE* fd;
+	int size;
+	size_t k=0;
+
 	n = scandir(backdir,&nl,NULL,alphasort);
 	if(n<0)
 		perror("scandir");
@@ -230,7 +237,22 @@ void show_backups(){
 		while(n--){
 			if(strncmp(nl[n]->d_name,"..",2)==0 || strncmp(nl[n]->d_name,".",1)==0)
 				continue;
-			printf("%s\n",nl[n]->d_name);
+			printf("%s : ",nl[n]->d_name);
+
+			sprintf(commitfile,"%s/%s/.commit",backdir,nl[n]->d_name);
+			if((fd = fopen(commitfile,"r"))==NULL){
+				printf("\n");
+			}else{
+				while((size = getline(&buf,&k,fd))!=-1){
+					if(strncmp(buf,"commit : ",9)==0)
+						break;
+				}
+				if(size==-1)
+					printf("\n");
+
+				if(getline(&buf,&k,fd)!=-1)
+					printf("%s",buf);
+			}
 			free(nl[n]);
 		}
 		free(nl);
