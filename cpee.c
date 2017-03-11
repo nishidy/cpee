@@ -244,10 +244,11 @@ void init_option(){
 	g_argoption.commitmessage = NULL;
 }
 
-void shift_arguments(int idx, int argc, char* argv[]){
+void shift_arguments(int idx, int* argc, char* argv[]){
 	int i;
-	for(i=idx;i<argc-1;i++)
+	for(i=idx;i<(*argc)-1;i++)
 		argv[i] = argv[i+1];
+	(*argc)--;
 
 }
 
@@ -266,12 +267,11 @@ int main(int argc, char* argv[]){
 					g_argoption.compbackup = 1;
 
 				if(strncmp(argv[i],"-m",2)==0){
-					shift_arguments(i,argc,argv);
+					shift_arguments(i,&argc,argv);
 					g_argoption.commitmessage = argv[i];
 				}
 
-				shift_arguments(i,argc,argv);
-				argc--;
+				shift_arguments(i,&argc,argv);
 				break;
 			default:
 				i++;

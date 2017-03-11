@@ -5,7 +5,7 @@ void copy_file_to_file(char* from, char* to){
 	char buf[SIZE];
 	int fd_from, fd_to, size;
 	if( is_file_exist(to) ){
-		printf("file exists.\n");
+		printf("file exists. %s %s\n",from,to);
 		exit(-1);
 	}else{
 		if( stat(from,&s) == -1 )
