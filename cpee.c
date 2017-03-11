@@ -1,28 +1,44 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <string.h>
-#include <dirent.h>
-#include <time.h>
-#include <openssl/md5.h>
-
-#define SIZE  65535
-#define PNAME 4096
-#define FNAME 1024
-
-struct option {
-	int hardlink;
-};
-
-struct option g_argoption;
-int g_upperbackupsize;
+#include "cpee.h"
 
 void show_errno(){
 	fprintf(stderr,"errorno: %d\n",errno);
 	exit(-1);
+}
+
+void write_archive(const char *outname, const char **filename)
+{
+  struct archive *a;
+  struct archive_entry *entry;
+  struct stat st;
+  char buff[8192];
+  int len;
+  int fd;
+
+  a = archive_write_new();
+  archive_write_add_filter_gzip(a);
+  archive_write_set_format_pax_restricted(a); // Note 1
+  archive_write_open_filename(a, outname);
+  while (*filename) {
+    stat(*filename, &st);
+    entry = archive_entry_new(); // Note 2
+    archive_entry_set_pathname(entry, *filename);
+    //archive_entry_set_size(entry, st.st_size); // Note 3
+    //archive_entry_set_filetype(entry, AE_IFREG);
+    //archive_entry_set_perm(entry, 0644);
+	archive_entry_copy_stat(entry,&st);
+    archive_write_header(a, entry);
+    fd = open(*filename, O_RDONLY);
+    len = read(fd, buff, sizeof(buff));
+    while ( len > 0 ) {
+        archive_write_data(a, buff, len);
+        len = read(fd, buff, sizeof(buff));
+    }
+    close(fd);
+    archive_entry_free(entry);
+    filename++;
+  }
+  archive_write_close(a); // Note 4
+  archive_write_free(a); // Note 5
 }
 
 int is_file_exist(char* path){
@@ -45,57 +61,6 @@ int is_file_exist(char* path){
 	return 1;
 }
 
-void copy_file_to_file(char* from, char* to){
-	struct stat s;
-	char buf[SIZE];
-	int fd_from, fd_to, size;
-	if( is_file_exist(to) ){
-		printf("file exists.\n");
-		exit(-1);
-	}else{
-		if( stat(from,&s) == -1 )
-			show_errno();
-
-		if(g_upperbackupsize < s.st_size)
-			return;
-
-		if((fd_to=open(to,O_CREAT|O_WRONLY,s.st_mode)) != -1){
-			if((fd_from=open(from,O_RDONLY)) != -1){
-				while(1){
-					size = read(fd_from,buf,SIZE);
-					switch(size){
-						case -1:
-							printf("copy_file_to_file : %s, %s\n",from,to);
-							show_errno();
-						case 0:
-							close(fd_to);
-							close(fd_from);
-							break;
-						default:
-							if(write(fd_to,buf,size) == -1){
-								printf("copy_file_to_file : %s, %s\n",from,to);
-								show_errno();
-							}
-							break;
-					}
-					if(size==0) break;
-				}
-			}else{
-				printf("copy_file_to_file : %s, %s\n",from,to);
-				show_errno();
-			}
-		}else{
-			printf("copy_file_to_file : %s, %s\n",from,to);
-			show_errno();
-		}
-
-	}
-}
-
-void copy_file_to_link(char* from, char* to){
-	link(from,to);
-}
-
 void get_file_name(char* path, char* file_name){
 	char* token;
 	char* saveptr;
@@ -105,65 +70,6 @@ void get_file_name(char* path, char* file_name){
 	while(token!=NULL){
 		sprintf(file_name,"%s",token);
 		token = strtok_r(NULL,"/",&saveptr);
-	}
-}
-
-void copy_file_to_dir(char* from, char* to){
-	char to_full[FNAME] = {"\0"};
-	char from_file[FNAME] = {"\0"};
-	get_file_name(from,from_file);
-	sprintf(to_full,"%s/%s",to,from_file);
-	if(g_argoption.hardlink){
-		copy_file_to_link(from,to_full);
-	}else{
-		copy_file_to_file(from,to_full);
-	}
-}
-
-void copy_dir_to_dir(char* from, char* to){
-	DIR *dir;
-	if((dir=opendir(from))==NULL)
-		show_errno();
-
-	struct dirent *dp;
-	char next_from[FNAME] = {'\0'};
-	char next_to[FNAME] = {'\0'};
-	struct stat s;
-	for(dp=readdir(dir);dp!=NULL;dp=readdir(dir)){
-		sprintf(next_from,"%s/%s",from,dp->d_name);
-		if(dp->d_type==DT_REG){
-			copy_file_to_dir(next_from,to);
-		}
-		if(dp->d_type==DT_DIR){
-			if(strncmp(dp->d_name,"..",2)==0 || strncmp(dp->d_name,".",1)==0)
-				continue;
-
-			sprintf(next_to,"%s/%s",to,dp->d_name);
-			if(stat(next_from,&s) == 0){
-				mkdir(next_to,s.st_mode);
-			}else{
-				show_errno();
-			}
-			copy_dir_to_dir(next_from,next_to);
-		}
-	}
-}
-
-void copy_to_dir(int argc, char* argv[]){
-	int i;
-	char from[FNAME] = {'\0'};
-	struct stat s;
-	for(i=1;i<argc-1;i++){
-		sprintf(from,"%s",argv[i]);
-		if( stat(argv[i],&s) == 0 ){
-			if( S_ISREG(s.st_mode) )
-				copy_file_to_dir(argv[i],argv[argc-1]);
-
-			if( S_ISDIR(s.st_mode) )
-				copy_dir_to_dir(argv[i],argv[argc-1]);
-		}else{
-			show_errno();
-		}
 	}
 }
 
@@ -204,6 +110,12 @@ void get_date(char date[]){
 
 }
 
+int is_compbackup_option_on(){
+	if(getenv("CPEECOMPBACKUP")==NULL)
+		return 0;
+	return 1;
+}
+
 void register_hash(char* from){
 	MD5_CTX c;
 	MD5_Init(&c);
@@ -237,6 +149,10 @@ void cpee_to_dir(int argc, char* argv[]){
 	register_hash(argv[1]);
 }
 
+void comp_backup(char* backdir){
+
+}
+
 void cpee_file_to_file(char* from, char* to){
 	char date[FNAME];
 	get_date(date);
@@ -259,23 +175,10 @@ void cpee_file_to_file(char* from, char* to){
 	sprintf(to_file,"%s/%s",to_path,from_file);
 	copy_file_to_file(from,to_file);
 
+	if(g_argoption.compbackup)
+		comp_backup(to_path);
+
 	register_hash(from);
-}
-
-void copy_from_backup(char* date){
-	char to_path[PNAME];
-	get_backup_dir(date,to_path);
-
-	struct stat s;
-	if( stat(to_path,&s) == 0 ){
-		if( !S_ISDIR(s.st_mode) )
-			show_errno();
-	}else{
-		printf("no backups of the date %s.\n",date);
-		exit(-1);
-	}
-
-	copy_dir_to_dir(to_path,".");
 }
 
 void show_backups(){
@@ -300,9 +203,9 @@ void show_backups(){
 	}
 }
 
-
 void init_option(){
 	g_argoption.hardlink = 0;
+	g_argoption.compbackup = 0;
 }
 
 void shift_arguments(int idx, int argc, char* argv[]){
@@ -322,6 +225,9 @@ int main(int argc, char* argv[]){
 				if(strncmp(argv[i],"-l",2)==0){
 					g_argoption.hardlink = 1;
 				}
+				if(strncmp(argv[i],"-c",2)==0){
+					g_argoption.compbackup = 1;
+				}
 				shift_arguments(i,argc,argv);
 				argc--;
 				break;
@@ -330,6 +236,9 @@ int main(int argc, char* argv[]){
 				break;
 		}
 	}
+
+	if(is_compbackup_option_on())
+		g_argoption.compbackup = 1;
 
 	switch(argc){
 		case 0:
