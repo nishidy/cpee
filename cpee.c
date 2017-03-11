@@ -5,40 +5,76 @@ void show_errno(){
 	exit(-1);
 }
 
-void write_archive(const char *outname, const char **filename)
-{
-  struct archive *a;
-  struct archive_entry *entry;
-  struct stat st;
-  char buff[8192];
-  int len;
-  int fd;
+void recursive_write_archive(struct archive* a, const char *to_path){
 
-  a = archive_write_new();
-  archive_write_add_filter_gzip(a);
-  archive_write_set_format_pax_restricted(a); // Note 1
-  archive_write_open_filename(a, outname);
-  while (*filename) {
-    stat(*filename, &st);
-    entry = archive_entry_new(); // Note 2
-    archive_entry_set_pathname(entry, *filename);
-    //archive_entry_set_size(entry, st.st_size); // Note 3
-    //archive_entry_set_filetype(entry, AE_IFREG);
-    //archive_entry_set_perm(entry, 0644);
-	archive_entry_copy_stat(entry,&st);
-    archive_write_header(a, entry);
-    fd = open(*filename, O_RDONLY);
-    len = read(fd, buff, sizeof(buff));
-    while ( len > 0 ) {
-        archive_write_data(a, buff, len);
-        len = read(fd, buff, sizeof(buff));
-    }
-    close(fd);
-    archive_entry_free(entry);
-    filename++;
-  }
-  archive_write_close(a); // Note 4
-  archive_write_free(a); // Note 5
+	// copy_dir_to_dir
+	DIR *dir;
+	if((dir=opendir(to_path))==NULL)
+		show_errno();
+
+	struct dirent *dp;
+	char next_from[FNAME] = {'\0'};
+	char next_to[FNAME] = {'\0'};
+
+	struct archive_entry *entry;
+	char buff[8192];
+	int len;
+	int fd;
+
+	struct stat s;
+
+	for(dp=readdir(dir);dp!=NULL;dp=readdir(dir)){
+		sprintf(next_from,"%s/%s",to_path,dp->d_name);
+		if(dp->d_type==DT_REG){
+			stat(next_from, &s);
+			entry = archive_entry_new(); // Note 2
+			archive_entry_set_pathname(entry, next_from);
+			archive_entry_copy_stat(entry,&s);
+			archive_write_header(a, entry);
+			fd = open(next_from, O_RDONLY);
+			len = read(fd, buff, sizeof(buff));
+			while ( len > 0 ) {
+			    archive_write_data(a, buff, len);
+			    len = read(fd, buff, sizeof(buff));
+			}
+			close(fd);
+			archive_entry_free(entry);
+		}
+		if(dp->d_type==DT_DIR){
+			if(strncmp(dp->d_name,"..",2)==0 || strncmp(dp->d_name,".",1)==0)
+				continue;
+
+			sprintf(next_to,"%s/%s",to_path,dp->d_name);
+			if(stat(next_from,&s) == 0){
+				recursive_write_archive(a,next_to);
+			}else{
+				show_errno();
+			}
+		}
+	}
+
+}
+
+void write_archive(char *outname, char *to_path)
+{
+	struct archive *a;
+	struct stat st;
+
+	a = archive_write_new();
+	archive_write_add_filter_gzip(a);
+	archive_write_set_format_pax_restricted(a); // Note 1
+	archive_write_open_filename(a, outname);
+
+	recursive_write_archive(a, to_path);
+
+	archive_write_close(a); // Note 4
+	archive_write_free(a); // Note 5
+}
+
+void comp_backup(char* to_path){
+	char archive[FNAME];
+	sprintf(archive,"%s.tar.gz",to_path);
+	write_archive(archive,to_path);
 }
 
 int is_file_exist(char* path){
@@ -86,7 +122,7 @@ void get_backup_dir(char timestamp[], char* to_path){
 	char* backdir;
 	if((backdir=getenv("CPEEBACKUPDIR"))==NULL)
 		show_errno();
-	sprintf(to_path,"%s/%s/",backdir,timestamp);
+	sprintf(to_path,"%s/%s",backdir,timestamp);
 }
 
 void get_backup_size(){
@@ -146,11 +182,10 @@ void cpee_to_dir(int argc, char* argv[]){
 	sprintf(argv[argc-1],"%s/",to_path);
 	copy_to_dir(argc,argv);
 
+	if(g_argoption.compbackup)
+		comp_backup(to_path);
+
 	register_hash(argv[1]);
-}
-
-void comp_backup(char* backdir){
-
 }
 
 void cpee_file_to_file(char* from, char* to){
@@ -218,16 +253,17 @@ void shift_arguments(int idx, int argc, char* argv[]){
 int main(int argc, char* argv[]){
 
 	init_option();
+
 	int i=1;
 	while(i<argc){
 		switch(argv[i][0]){
 			case '-':
-				if(strncmp(argv[i],"-l",2)==0){
+				if(strncmp(argv[i],"-l",2)==0)
 					g_argoption.hardlink = 1;
-				}
-				if(strncmp(argv[i],"-c",2)==0){
+
+				if(strncmp(argv[i],"-c",2)==0)
 					g_argoption.compbackup = 1;
-				}
+
 				shift_arguments(i,argc,argv);
 				argc--;
 				break;
