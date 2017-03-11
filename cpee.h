@@ -18,6 +18,7 @@
 struct option {
 	int hardlink;
 	int compbackup;
+	char* commitmessage;
 };
 
 struct option g_argoption;

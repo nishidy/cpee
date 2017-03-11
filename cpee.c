@@ -241,6 +241,7 @@ void show_backups(){
 void init_option(){
 	g_argoption.hardlink = 0;
 	g_argoption.compbackup = 0;
+	g_argoption.commitmessage = NULL;
 }
 
 void shift_arguments(int idx, int argc, char* argv[]){
@@ -263,6 +264,11 @@ int main(int argc, char* argv[]){
 
 				if(strncmp(argv[i],"-c",2)==0)
 					g_argoption.compbackup = 1;
+
+				if(strncmp(argv[i],"-m",2)==0){
+					shift_arguments(i,argc,argv);
+					g_argoption.commitmessage = argv[i];
+				}
 
 				shift_arguments(i,argc,argv);
 				argc--;
